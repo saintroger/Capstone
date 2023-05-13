@@ -1,0 +1,62 @@
+Cleaning LSMS Survey Data. 
+Audience: Data Scientist, Agritech, NGO
+Goal: Show useful data cleaning techniques, deal with Survey Data, deal with multiple tables, merge data: Panel data. 
+Keywords: Panel data, Survey Data, Python, R, Clean, merge, WB, World Bank, LSMS, Market access
+
+The world today faces a food crisis. More than ever before, people around the world are exposed to hunger. It could be as a result of conflict, climate change or other economic factors. Government, NGO and many other international organizations are taking actions to overcome this growing issue of food security. Countries most affected by these conflicts happen to be developing countries and if nothing is done the effect will be spread. 
+In this article I am going to talk about the Living Standard Measurement Survey data and how it can be used to eradicate hunger.
+
+Survey Data
+Scientists are continuously looking for ways to address climate change and food security through innovative methods. In recent years, data has shown to be very powerful to solve world issues. In Healthcare for example, we can recall the role data played in slowing down COVID-19 pandemic; data was used for early detection, rapid responses, contact tracing, research and vaccine development. Data is not always available to replicate large scale study and take data-guided actions.
+In the case of agriculture, scientists lack data about African farmers. Countries that depend on agriculture have recently put emphasis on data collection, prior to that farmers at the individual level did not have incentive to collect data. International organizations however understood years ago the power of data, and collected data. This way of collecting data from population is called surveys and has been used in social science in America since the early 1930s. Survey data is powerful, you can collect data on different topics all at once and be the ground for different research. In the next section we will talk about LSMS data.
+LSMS Data 
+LSMS stands for Living Standard Measurement Survey, it is a survey that the world bank conducts on a regular basis since the early 1980s. The goal of the survey is to bridge data gaps while helping countries collect data. Since this program started, data from these surveys have been used in many fields: research, policy, agriculture and many others. This is a testimony of how rich in information this survey is. 
+I was first introduced to the LSMS survey data during a research project with my professor Andrew Hobbs. We worked with the Tanzania dataset, we used available information to predict farmers yield and build an index insurance. During the survey, the team collected data on households, communities and agriculture. Depending on the scope of your research you can select specific tables within each scope. I am interested in Agriculture. To be specific, my research question is Does market access have an impact on farmer total revenue from crops sales.
+I will go in detail on what table to select, and how to merge them in order to obtain panel data that can be used for causal inference. I will post another article about economics methods for my research. 
+
+Data cleaning
+Every data scientist will tell you that data cleaning is their least preferred part of working with data, but it is also very important. If the data cleaning part is not done correctly, the analysis will yield incorrect results. In the case of the LSMS survey data prior to data cleaning one must load their data of interest and the basic information document available on the World Bank/LSMS website does a good job at explaining tables, sections and observations. 
+We can now dive deeper into some data cleaning techniques that are commonly used by data scientists working with survey data. Here are the steps to follow when cleaning data
+Load 
+With the pandas library you can load data on your Python notebook quite easily, it is important to put all the data in one folder so it is easy to access them. Here is how I do it:
+w3_ph_hhe = pd.read_csv(path+'NGA_2015_GHSP-W3_v02_M_CSV/sect2_harvestw3.csv')[['hhid', 'indiv', 's2aq9', 's2aq17']]
+Here I load sect2_harvestw3.csv which is a table for the household survey scope. I am selecting four attributes: hhid, indiv, s2aq9, s2aq17. hhid and indiv are both primary keys and the two are following a naming convention used during the survey. For clarity, analysis and interpretation, I will rename all attributes whose name is not self explanatory. These are some good practices when working with tables.
+Rename
+Renaming columns in python is pretty straightforward, here I just use the function rename() from the pandas library. Here is what it looks like.
+
+w3_ph_hhe = w3_ph_hhe.rename(columns={'s2aq9': 'highest_educ',
+                's2aq17':'means_to_schl',
+                's2aq18':'time_to_schl'})
+
+As I was working on this, I had to go back and forth with the documentation to know what is the meaning of each attribute, it was time consuming. I think it could be interesting to automate this process with some scrapping or NLP(Natural Language Processing). I will be looking into that in future posts. 
+Merge 
+This step is done multiple times in the cleaning process, we can merge tables using unique identifiers which in the case of Household survey is HHID, indiv. 
+w2_ph_hh = w2_ph_hhr.merge(right = w2_ph_hhe, on = ['hhid', 'indiv'])
+
+
+The latter case is straightforward. For agriculture tables, both plotid and HHID are keys as we take in consideration the fact that a household can have many farm plots. 
+sect_a = w2_secta3.merge(right = w2_secta2, on = ['hhid', 'plotid'])
+
+
+The community survey uses 3 keys as mentioned in the survey documentation. In order to merge community surveys tables together ones must use [ea, lga, state]. 
+ag_w2 = ag_w2.merge(right = w2_sectc2, on =['state', 'lga', 'ea'])
+ 
+I had shown some initial steps of data cleaning with merging within a scope of the survey and gave some examples. What if you want to merge across different survey scope.
+For my project I had to merge all three scopes(Agriculture, Household and community) of the LSMS survey done in Nigeria to obtain my final table. This could be done in many ways depending on which table you decide to merge first. The figure below shows an attempt to merge all three scopes. 
+
+Figure 1: Merging across survey scope.
+This merging process is very important and must be done right, I cannot emphasize this enough. In general there are ways to check whether the merging step was done right. You can do that by checking the number of observations. In the case of mine I had 13,000+ observations, something didn’t add up but because I had an understanding of the survey, I knew that some households were repeated due to the fact that one household can have many individuals in the interview. To fix that, I grouped by hhid and aggregated the other information in order to have a sum of harvest, income and area planted by the household in each year that responded to the survey.
+Here is how you can aggregate data and conserved granular information. 
+Sometimes this process may yield errors because of the column type, make sure to change the column type to what it needs to be: float or int. In the case of str it may be a little complicated. I created a list for cropcodes, I also selected first for the state because all household that are similar are in the same state so we can just select the first occurrence.
+ 
+Figure 2: Aggregating Data
+This is done so data are not repeated and you can see some variables are summed while for others I only kept the first observation.
+Remaining fixes
+After grouping the data there are some few steps that may be required depending on the data and what you want to achieve. Here are some of the extra steps I had in my cleaning process: 
+Rename crops
+Rename Zones: North, South, North West …
+Compute area in hectares only
+Computer harvest in KG only 
+Subset the data to only the column you are interested in.
+How can it be useful?
+Overall, data is useful even for farmers. Before these surveys were implemented there was no way to have a rough approximation of how much farmers produce but now we can push our analysis and relate agriculture production to health, finance, education and other fields. My original idea was to use this as a basis for a business model but I ended up using what impact market access has on farmers annual revenue from sales. My future post will include a causal inference analysis on the LSMS Survey data and the result and limitations of this methods and procedures I followed.    
